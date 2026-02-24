@@ -15,7 +15,7 @@ export default function AddBorrowerModal({
     fName: "",
     mName: "",
     lName: "",
-    age: "",
+    date: "",
     contact: "",
   });
 
@@ -92,14 +92,13 @@ return (
             className="w-full rounded-lg border border-gray-300 px-3 py-3 text-sm focus:border-[#1E3A8A] focus:ring-1 focus:ring-[#1E3A8A] outline-none"
           />
 
-          <input
-            name="age"
-            type="number"
-            placeholder="Age"
-            value={form.age}
-            onChange={handleChange}
-            className="w-full rounded-lg border border-gray-300 px-3 py-3 text-sm focus:border-[#1E3A8A] focus:ring-1 focus:ring-[#1E3A8A] outline-none"
-          />
+<input
+  name="date"
+  type="date"
+  value={form.date}
+  onChange={handleChange}
+  className="w-full rounded-lg border border-gray-300 px-3 py-3 text-sm focus:border-[#1E3A8A] focus:ring-1 focus:ring-[#1E3A8A] outline-none"
+/>
 
           <input
             name="contact"
