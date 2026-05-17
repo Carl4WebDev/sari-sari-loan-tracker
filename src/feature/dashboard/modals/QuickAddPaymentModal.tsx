@@ -1,12 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-
-interface Borrower {
-  id: number;
-  fName: string;
-  lName: string;
-  totalLoan: number;
-}
+import { useBorrower } from "../../context/borrowers/useBorrower";
 
 interface Props {
   isOpen: boolean;
@@ -18,25 +12,25 @@ export default function QuickAddPaymentModal({
   isClose,
 }: Props) {
   const navigate = useNavigate();
+
+  const { borrowers, fetchBorrowers } = useBorrower();
+
   const [animate, setAnimate] = useState(false);
   const [search, setSearch] = useState("");
 
-  // 🔥 HARDCODED (replace with API)
-  const borrowers: Borrower[] = [
-    { id: 1, fName: "Juan", lName: "Dela Cruz", totalLoan: 1200 },
-    { id: 2, fName: "Maria", lName: "Santos", totalLoan: 540 },
-    { id: 3, fName: "Pedro", lName: "Reyes", totalLoan: 0 }, // no utang
-  ];
+  // -----------------------------
+  // Load borrowers
+  // -----------------------------
 
-  const borrowersWithUtang = borrowers.filter(
-    (b) => b.totalLoan > 0
-  );
+  useEffect(() => {
+    if (!isOpen) return;
 
-  const filtered = borrowersWithUtang.filter((b) =>
-    `${b.fName} ${b.lName}`
-      .toLowerCase()
-      .includes(search.toLowerCase())
-  );
+    fetchBorrowers();
+  }, [isOpen]);
+
+  // -----------------------------
+  // Modal animation
+  // -----------------------------
 
   useEffect(() => {
     if (isOpen) {
@@ -47,6 +41,20 @@ export default function QuickAddPaymentModal({
   }, [isOpen]);
 
   if (!isOpen) return null;
+
+  // -----------------------------
+  // Borrowers with utang only
+  // -----------------------------
+
+  const borrowersWithUtang = borrowers.filter(
+    (b: any) => Number(b.total_loan) > 0
+  );
+
+  const filtered = borrowersWithUtang.filter((b: any) =>
+    `${b.first_name} ${b.last_name}`
+      .toLowerCase()
+      .includes(search.toLowerCase())
+  );
 
   return (
     <div
@@ -72,22 +80,24 @@ export default function QuickAddPaymentModal({
           />
 
           <div className="max-h-60 overflow-y-auto space-y-2">
-            {filtered.map((b) => (
+            {filtered.map((b: any) => (
               <div
-                key={b.id}
+                key={b.borrower_id}
                 onClick={() => {
-                  navigate(`/borrowers/${b.id}`, {
+                  navigate(`/borrowers/${b.borrower_id}`, {
                     state: { openPayment: true },
                   });
+
                   isClose();
                 }}
                 className="p-3 border rounded-lg cursor-pointer hover:bg-gray-50 flex justify-between"
               >
                 <span>
-                  {b.fName} {b.lName}
+                  {b.first_name} {b.last_name}
                 </span>
+
                 <span className="text-[#1E3A8A] font-semibold">
-                  ₱{b.totalLoan}
+                  ₱{Number(b.total_loan).toLocaleString()}
                 </span>
               </div>
             ))}

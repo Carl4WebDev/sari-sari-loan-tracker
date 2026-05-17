@@ -2,11 +2,22 @@ import { useState } from "react";
 import { useMediaQuery } from "../../../shared/hooks/useMediaQuery";
 import { Link } from "react-router-dom";
 
+import {useUser} from "../../context/users/useUser.js"
+
 export default function Sidebar() {
+
+  const { clearUser } = useUser();
+
   const isMobile = useMediaQuery("(max-width: 768px)");
   const [isOpen, setIsOpen] = useState(false);
 
-  const handleClose = () => setIsOpen(false);
+  const handleClose = () => {
+    setIsOpen(false)
+  };
+  const handleLogout = () => {
+        clearUser();
+    setIsOpen(false)
+  };
 
   return (
     <>
@@ -60,7 +71,7 @@ export default function Sidebar() {
         <div className="p-3 border-t border-gray-200">
           <Link
             to={"/"}
-            onClick={handleClose}
+            onClick={handleLogout}
             className="block w-full rounded-lg px-3 py-3 text-sm font-medium text-white bg-[#1E3A8A] hover:bg-[#172E6B] text-center transition"
           >
             Logout

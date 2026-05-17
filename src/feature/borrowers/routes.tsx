@@ -1,5 +1,5 @@
 import { Route } from "react-router-dom";
-import ProtectedLayout from "../../shared/layouts/ProtectedLayout";
+import ProtectedLayout from "../components/Sidebar/Sidebar";
 import BorrowersPage from "./pages/BorrowersPage";
 import BorrowerDetailsPage from "./pages/BorrowerDetailsPage";
 

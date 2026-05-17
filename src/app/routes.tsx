@@ -1,19 +1,25 @@
 import { Routes } from "react-router-dom";
 
-import { authRoutes } from "../feature/auth/routes";
-import { dashboardRoutes } from "../feature/dashboard/routes";
-import {borrowerRoutes} from "../feature/borrowers/routes" 
 import {publicRoutes} from "../feature/public/routes" 
+import { featureRoutes } from "../feature/routes";
+import { UserProvider } from "../feature/context/users/UserProvider";
+import { BorrowerProvider } from "../feature/context/borrowers/BorrowerProvider";
+import { LoanProvider } from "../feature/context/loans/LoanProvider";
+import { PaymentProvider } from "../feature/context/payments/PaymentProvider";
 
 export default function AppRoutes() {
   return (
-    <Routes>
-
-      {authRoutes}
-      {dashboardRoutes}
-      {borrowerRoutes}
-      {publicRoutes}
-
-    </Routes>
+    <PaymentProvider>
+      <UserProvider>
+        <BorrowerProvider>
+          <LoanProvider>
+            <Routes>
+              {publicRoutes}
+              {featureRoutes}
+            </Routes>
+          </LoanProvider>
+        </BorrowerProvider>
+      </UserProvider>
+    </PaymentProvider>
   );
 }

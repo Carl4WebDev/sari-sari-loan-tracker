@@ -1,8 +1,11 @@
 import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { useMemo, useState, useEffect } from "react";
 
+import { useBorrower } from "../../context/borrowers/useBorrower";
+import { calculateAge } from "../../components/utility/calculateAge";
+
 import AddPaymentModal from "../modals/AddPaymentModal";
-import AddLoanModal from "../../dashboard/modals/AddLoanModal";
+import AddLoanModalBorrowerDetails from "../modals/AddLoanModalBorrowerDetails";
 import EditLoanModal from "../modals/EditLoanModal";
 
 interface LoanItem {
@@ -30,50 +33,11 @@ const ITEMS_PER_PAGE = 3;
 export default function BorrowerDetailsPage() {
   const { id } = useParams();
   const navigate = useNavigate();
-const location = useLocation();
-  const borrower = {
-    id,
-    fName: "Juan",
-    lName: "Dela Cruz",
-    age: 35,
-    contact: "09171234567",
-  };
-    const transactions: Transaction[] = [
-    {
-      id: 1,
-      type: "LOAN",
-      date: "2025-01-01",
-      items: [
-        { product: "Sardines", quantity: 3, price: 20 },
-        { product: "Rice", quantity: 1, price: 50 },
-      ],
-      amount: 110,
-    },
-    {
-      id: 2,
-      type: "PAYMENT",
-      date: "2025-01-02",
-      amount: 50,
-    },
-    {
-      id: 3,
-      type: "LOAN",
-      date: "2025-01-03",
-      items: [{ product: "Coffee", quantity: 2, price: 15 }],
-      amount: 30,
-    },
-    {
-      id: 4,
-      type: "LOAN",
-      date: "2025-01-05",
-      items: [{ product: "Sugar", quantity: 1, price: 40 }],
-      amount: 40,
-    },
-  ];
+  const location = useLocation();
 
   const [isPublicEnabled, setIsPublicEnabled] = useState(true);
 
-const publicToken = "aj29fj39fj2k39fEXAMPLE123456";
+  const publicToken = "aj29fj39fj2k39fEXAMPLE123456";
 
   const [dateFilter, setDateFilter] = useState("");
   const [productFilter, setProductFilter] = useState("");
@@ -81,26 +45,33 @@ const publicToken = "aj29fj39fj2k39fEXAMPLE123456";
   const [noteInput, setNoteInput] = useState("");
 
   const [isLoanModalOpen, setIsLoanModalOpen] = useState(false);
-const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
-  
+  const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
 
-const [isEditLoanOpen, setIsEditLoanOpen] = useState(false);
-const [selectedLoan, setSelectedLoan] = useState<{
-  id: number;
-  borrowerId: number;
-  items: any[];
-} | null>(null);
+  const [isEditLoanOpen, setIsEditLoanOpen] = useState(false);
+  const [selectedLoan, setSelectedLoan] = useState<{
+    id: number;
+    borrowerId: number;
+    items: any[];
+  } | null>(null);
 
-useEffect(() => {
-  if (location.state?.openPayment) {
-    setIsPaymentModalOpen(true);
-  }
-}, [location.state]);
+
+const {
+  borrowers,
+  transactions,
+  fetchBorrowers,
+  fetchBorrowerTransactions,
+  loading,
+} = useBorrower();
+
+  useEffect(() => {
+    if (location.state?.openPayment) {
+      setIsPaymentModalOpen(true);
+    }
+  }, [location.state]);
+
   const [notes, setNotes] = useState<Note[]>([
     { id: 1, message: "Customer promised to pay Friday.", date: "2025-01-03" },
   ]);
-
-
 
   const totalBalance = useMemo(() => {
     return transactions.reduce((acc, t) => {
@@ -126,6 +97,47 @@ useEffect(() => {
       return matchDate && matchProduct;
     });
   }, [transactions, dateFilter, productFilter]);
+
+
+  useEffect(() => {
+  if (!id) return;
+
+  fetchBorrowerTransactions(id);
+}, []);
+
+  useEffect(() => {
+    fetchBorrowers();
+  }, []);
+
+  const borrower = useMemo(() => {
+    if (!borrowers) return null;
+
+    const sorted = [...borrowers].sort(
+      (a: any, b: any) => a.borrower_id - b.borrower_id
+    );
+
+    return sorted.find(
+      (b: any) => String(b.borrower_id) === String(id)
+    );
+  }, [borrowers, id]);
+
+  if (loading || !borrower) {
+    return (
+      <div className="p-6 text-gray-500">
+        Loading borrower details...
+      </div>
+    );
+  }
+
+  const borrowerAdapter = {
+    id: borrower.borrower_id,
+    fName: borrower.first_name,
+    lName: borrower.last_name,
+    age: calculateAge(borrower.dob),
+    contact: borrower.contact_number,
+  };
+
+
 
   const totalPages = Math.ceil(
     filteredTransactions.length / ITEMS_PER_PAGE
@@ -155,38 +167,29 @@ useEffect(() => {
 
   return (
     <div className="space-y-6 pb-32">
-<AddLoanModal
+
+<AddLoanModalBorrowerDetails
   isOpen={isLoanModalOpen}
   isClose={() => setIsLoanModalOpen(false)}
-  borrower={borrower}
+  borrowerId={borrower.borrower_id}
 />
-<AddPaymentModal
-  isOpen={isPaymentModalOpen}
-  isClose={() => setIsPaymentModalOpen(false)}
-  borrower={{
-    id: 1,
-    fName: "Juan",
-    lName: "Dela Cruz",
-    totalLoan: 1200,
-    pastPaymentNotes: [
-      {
-        date: "2025-01-02",
-        amount: 200,
-        note: "Partial payment - cash",
-      },
-      {
-        date: "2025-01-10",
-        amount: 300,
-        note: "Paid via GCash - installment",
-      },
-    ],
-  }}
-/>
-<EditLoanModal
-  isOpen={isEditLoanOpen}
-  isClose={() => setIsEditLoanOpen(false)}
-  loan={selectedLoan}
-/>
+
+      <AddPaymentModal
+        isOpen={isPaymentModalOpen}
+        isClose={() => setIsPaymentModalOpen(false)}
+        borrower={{
+          ...borrowerAdapter,
+          totalLoan: totalBalance,
+          pastPaymentNotes: [],
+        }}
+      />
+
+      <EditLoanModal
+        isOpen={isEditLoanOpen}
+        isClose={() => setIsEditLoanOpen(false)}
+        loan={selectedLoan}
+      />
+
       {/* Back Button */}
       <div>
         <button
@@ -200,32 +203,33 @@ useEffect(() => {
       {/* Header */}
       <div>
         <h1 className="text-2xl font-semibold text-[#1E3A8A]">
-          {borrower.fName} {borrower.lName}
+          {borrower.first_name} {borrower.middle_name ?? ""} {borrower.last_name}
         </h1>
         <p className="text-sm text-gray-500">
-          📞 {borrower.contact} • Age {borrower.age}
+          📞 {borrower.contact_number} • Age {calculateAge(borrower.dob)}
         </p>
       </div>
 
       {/* Balance */}
-      <div className="rounded-xl bg-[#1E3A8A] text-white p-5">
-        <p className="text-sm text-blue-100">Total Balance</p>
-        <p className="text-3xl font-bold mt-2">
-          ₱{totalBalance.toLocaleString()}
-        </p>
-      </div>
+<div className="rounded-xl bg-[#1E3A8A] text-white p-5">
+  <p className="text-sm text-blue-100">Total Balance</p>
+  <p className="text-3xl font-bold mt-2">
+    ₱{totalBalance.toLocaleString()}
+  </p>
+</div>
 
-      {/* Public Loan Status Controls */}
+
+      {/* Public Link */}
       <div className="border rounded-xl p-4 bg-gray-50 space-y-3">
         <p className="text-sm font-semibold text-[#1E3A8A]">
           Public Loan Status Access
         </p>
 
-        {/* Status Toggle */}
         <div className="flex justify-between items-center">
           <span className="text-sm text-gray-600">
             Status Page Enabled
           </span>
+
           <button
             onClick={() => setIsPublicEnabled(!isPublicEnabled)}
             className={`px-3 py-1 rounded-full text-xs font-medium ${
@@ -238,7 +242,6 @@ useEffect(() => {
           </button>
         </div>
 
-        {/* Copy Link */}
         <button
           onClick={() => {
             const link = `${window.location.origin}/status/${publicToken}`;
@@ -249,30 +252,23 @@ useEffect(() => {
         >
           📩 Copy Loan Status Link
         </button>
-
-        {/* Regenerate Token */}
-        <button
-          onClick={() => alert("Token regenerated (hardcoded demo)")}
-          className="w-full rounded-lg border border-[#1E3A8A] py-3 text-[#1E3A8A] text-sm font-medium"
-        >
-          🔄 Regenerate Link
-        </button>
       </div>
 
-      {/* Action Buttons */}
+      {/* Actions */}
       <div className="flex gap-3">
-<button
-  onClick={() => setIsLoanModalOpen(true)}
-  className="w-1/2 rounded-xl border border-[#1E3A8A] py-3 text-[#1E3A8A] font-semibold"
->
-  + Add Loan
-</button>
-<button
-  onClick={() => setIsPaymentModalOpen(true)}
-  className="w-1/2 rounded-xl bg-[#16A34A] py-3 text-white font-semibold "
->
-  + Add Payment
-</button>
+        <button
+          onClick={() => setIsLoanModalOpen(true)}
+          className="w-1/2 rounded-xl border border-[#1E3A8A] py-3 text-[#1E3A8A] font-semibold"
+        >
+          + Add Loan
+        </button>
+
+        <button
+          onClick={() => setIsPaymentModalOpen(true)}
+          className="w-1/2 rounded-xl bg-[#16A34A] py-3 text-white font-semibold"
+        >
+          + Add Payment
+        </button>
       </div>
 
       {/* Filters */}
@@ -299,7 +295,7 @@ useEffect(() => {
         </button>
       </div>
 
-      {/* Transaction History */}
+      {/* Transactions */}
       <div className="space-y-4">
         {paginatedTransactions.map((t) => (
           <div
@@ -316,26 +312,25 @@ useEffect(() => {
               >
                 {t.type}
               </span>
-{t.type === "LOAN" && (
-  <button
-    onClick={() => {
-      setSelectedLoan({
-        id: t.id,
-        borrowerId: borrower.id,
-        items: t.items || [],
-      });
-      setIsEditLoanOpen(true);
-    }}
-    className="text-xs text-gray-500 underline"
-  >
-    Edit
-  </button>
-)}
+
+              {t.type === "LOAN" && (
+                <button
+                  onClick={() => {
+                    setSelectedLoan({
+                      id: t.id,
+                      borrowerId: borrower.borrower_id,
+                      items: t.items || [],
+                    });
+                    setIsEditLoanOpen(true);
+                  }}
+                  className="text-xs text-gray-500 underline"
+                >
+                  Edit
+                </button>
+              )}
             </div>
 
-            <span className="text-xs text-gray-400">
-              {t.date}
-            </span>
+            <span className="text-xs text-gray-400">{t.date}</span>
 
             {t.type === "LOAN" && t.items && (
               <div className="text-sm text-gray-600 space-y-1">
@@ -388,7 +383,7 @@ useEffect(() => {
         </div>
       )}
 
-      {/* Notes Chatbox */}
+      {/* Notes */}
       <div className="border-t pt-6 space-y-4">
         <h2 className="text-lg font-semibold text-[#1E3A8A]">
           Notes
@@ -415,6 +410,7 @@ useEffect(() => {
             placeholder="Add a note..."
             className="flex-1 rounded-lg border border-gray-300 px-5 py-5 text-sm"
           />
+
           <button
             onClick={handleAddNote}
             className="rounded-lg bg-[#1E3A8A] px-4 text-white p-4 text-sm w-full"
@@ -423,6 +419,7 @@ useEffect(() => {
           </button>
         </div>
       </div>
+
     </div>
   );
 }
